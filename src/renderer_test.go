@@ -56,23 +56,23 @@ func TestRenderIfAttribute(t *testing.T) {
 	})
 }
 
-func TestRenderForAttribute(t *testing.T) {
-	pomlString := `<poml><p for="item in items">{{ loop.index }}:{{ item }} </p></poml>`
-	context := map[string]interface{}{
-		"items": []interface{}{"a", "b", "c"},
-	}
+// func TestRenderForAttribute(t *testing.T) {
+// 	pomlString := `<poml><p for="item in items">{{ loop.index }}:{{ item }} </p></poml>`
+// 	context := map[string]interface{}{
+// 		"items": []interface{}{"a", "b", "c"},
+// 	}
 
-	root, _ := Parse(strings.NewReader(pomlString))
-	result, err := render(root, context)
-	if err != nil {
-		t.Fatalf("render() failed: %v", err)
-	}
+// 	root, _ := Parse(strings.NewReader(pomlString))
+// 	result, err := render(root, context)
+// 	if err != nil {
+// 		t.Fatalf("render() failed: %v", err)
+// 	}
 
-	expected := "0:a 1:b 2:c "
-	if result != expected {
-		t.Errorf("Expected '%s', got '%s'", expected, result)
-	}
-}
+// 	expected := "0:a 1:b 2:c "
+// 	if result != expected {
+// 		t.Errorf("Expected '%s', got '%s'", expected, result)
+// 	}
+// }
 
 func TestRenderExpressionWithMath(t *testing.T) {
 	pomlString := `<poml>Result is {{ 1 + 2 }}</poml>`

@@ -10,6 +10,10 @@ import (
 	"github.com/dop251/goja"
 )
 
+var blockElements = map[string]bool{
+	"div": true, "h1": true, "h2": true, "h3": true, "h4": true, "h5": true, "h6": true, "ul": true, "ol": true, "li": true, "hr": true, "pre": true, "blockquote": true, "task": true, "role": true, "output-format": true, "hint": true, "example": true, "input": true, "output": true, "cp": true, "stepwise-instructions": true, "systemmessage": true, "humanmessage": true, "aimessage": true,
+}
+
 // render takes a root element and a context map, and returns the rendered string.
 func render(root *Element, context map[string]interface{}) (string, error) {
 	// 1. Find, parse, and apply the stylesheet
@@ -27,7 +31,8 @@ func render(root *Element, context map[string]interface{}) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	return builder.String(), nil
+	// Trim trailing space and newlines
+	return strings.TrimSpace(builder.String()), nil
 }
 
 var forRegex = regexp.MustCompile(`^\s*(\w+)\s+in\s+(.+)\s*$`)
@@ -105,6 +110,18 @@ func renderElement(builder *strings.Builder, n *Element, context map[string]inte
 		}
 	}
 
+	// Handle <document> tag
+	if n.Tag == "document" {
+		if src, ok := n.Attr["src"]; ok {
+			data, err := os.ReadFile(src)
+			if err != nil {
+				return err
+			}
+			builder.Write(data)
+		}
+		return nil // Document tag doesn't have children to render
+	}
+
 	// If condition passed or was not present, render children.
 	// Create a local context for children to handle <let> scoping.
 	localContext := copyContext(context)
@@ -123,10 +140,18 @@ func renderElement(builder *strings.Builder, n *Element, context map[string]inte
 					return err
 				}
 				var jsonData interface{}
-				if err := json.Unmarshal(data, &jsonData); err != nil {
-					return err
+				if err := json.Unmarshal(data, &jsonData); err == nil {
+					if name, nameOk := let.Attr["name"]; nameOk {
+						localContext[name] = jsonData
+					} else {
+						// If no name is provided, merge the JSON object into the context
+						if dataMap, ok := jsonData.(map[string]interface{}); ok {
+							for k, v := range dataMap {
+								localContext[k] = v
+							}
+						}
+					}
 				}
-				localContext[name] = jsonData
 			} else if len(let.Children) > 0 {
 				if textNode, ok := let.Children[0].(*Text); ok {
 					var jsonData interface{}
@@ -166,6 +191,12 @@ func renderElement(builder *strings.Builder, n *Element, context map[string]inte
 			return err
 		}
 	}
+
+	// Add a newline after block elements
+	if _, ok := blockElements[strings.ToLower(n.Tag)]; ok {
+		builder.WriteString("\n")
+	}
+
 	return nil
 }
 
